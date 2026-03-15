@@ -1,0 +1,41 @@
+name: Bin reminder
+
+on:
+  schedule:
+    # 19:00 Europe/London is 19:00 UTC in winter and 18:00 UTC in summer.
+    - cron: "0 18 * * 0"
+    - cron: "0 19 * * 0"
+  workflow_dispatch:
+    inputs:
+      force_send:
+        description: "Send notification even if it's not Sunday 19:00 UK time"
+        required: false
+        default: "false"
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python packages
+        run: pip install -r requirements.txt
+
+      - name: Install Playwright browser
+        run: python -m playwright install --with-deps chromium
+
+      - name: Run reminder
+        env:
+          BIN_POSTCODE: ${{ secrets.BIN_POSTCODE }}
+          BIN_HOUSE_NUMBER: ${{ secrets.BIN_HOUSE_NUMBER }}
+          PUSHOVER_TOKEN: ${{ secrets.PUSHOVER_TOKEN }}
+          PUSHOVER_USERS: ${{ secrets.PUSHOVER_USERS }}
+          FORCE_SEND: ${{ github.event.inputs.force_send || 'false' }}
+        run: python bin_notify.py
